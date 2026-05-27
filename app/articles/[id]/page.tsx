@@ -9,11 +9,11 @@ import {
 
 const TOTAL_PAGES = 5
 
-export default async function ArticlePage({
-    params,
-}: {
+type Props = {
     params: Promise<{ id: string }>
-}) {
+}
+
+export default async function ArticlePage({ params }: Props) {
     const { id } = await params
     const currentPage = Number(id)
 
