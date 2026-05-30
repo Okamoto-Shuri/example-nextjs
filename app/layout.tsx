@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/Sidebar/Sidebar"
-import { ThemeToggle } from "@/components/ThemeToggle/ThemeToggle"
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,29 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ja"
-      suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`
-          }}
-        />
-        <TooltipProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            <main>
-              <div className="flex items-center justify-between w-full p-2">
-                <SidebarTrigger />
-                <ThemeToggle />
-              </div>
-              {children}
-            </main>
-          </SidebarProvider>
-        </TooltipProvider>
-      </body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }
