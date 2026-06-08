@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
-import { DataGrid, type Column } from 'react-data-grid';
+import { DataGrid, renderTextEditor, type Column } from 'react-data-grid';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Columns3,
 } from 'lucide-react';
 import { ImportFileSchema } from '@/types';
 import { toast } from 'sonner';
@@ -72,6 +73,7 @@ export function CsvEditor({
       name: h,
       editable: true,
       resizable: true,
+      renderEditCell: renderTextEditor,
       width: 'auto' as unknown as number,
     }));
   }, [headers]);
@@ -132,6 +134,35 @@ export function CsvEditor({
     const updated = rows.slice(0, -1);
     setRows(updated);
     scheduleSave(title, headers, updated);
+  };
+
+  // ── 列追加 ────────────────────────────────────────
+  const addColumn = () => {
+    let idx = headers.length + 1;
+    let newName = `列${idx}`;
+    while (headers.includes(newName)) {
+      idx++;
+      newName = `列${idx}`;
+    }
+    const updatedHeaders = [...headers, newName];
+    const updatedRows = rows.map((row) => ({ ...row, [newName]: '' }));
+    setHeaders(updatedHeaders);
+    setRows(updatedRows);
+    scheduleSave(title, updatedHeaders, updatedRows);
+  };
+
+  // ── 列削除（最後の列） ────────────────────────────
+  const removeLastColumn = () => {
+    if (headers.length <= 1) return;
+    const removedHeader = headers[headers.length - 1];
+    const updatedHeaders = headers.slice(0, -1);
+    const updatedRows = rows.map((row) => {
+      const { [removedHeader]: _, ...rest } = row;
+      return rest;
+    });
+    setHeaders(updatedHeaders);
+    setRows(updatedRows);
+    scheduleSave(title, updatedHeaders, updatedRows);
   };
 
   // ── エクスポート ──────────────────────────────────
@@ -221,6 +252,21 @@ export function CsvEditor({
             <Trash2 className="mr-1.5 h-3.5 w-3.5" />
             行削除
           </Button>
+          <div className="w-px h-5 bg-border" />
+          <Button variant="outline" size="sm" onClick={addColumn}>
+            <Columns3 className="mr-1.5 h-3.5 w-3.5" />
+            列追加
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={removeLastColumn}
+            disabled={headers.length <= 1}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            列削除
+          </Button>
+          <div className="w-px h-5 bg-border" />
           <Button variant="outline" size="sm" onClick={handleImport}>
             <Upload className="mr-1.5 h-3.5 w-3.5" />
             インポート
