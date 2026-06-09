@@ -17,15 +17,35 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { Plus, LogOut, LayoutDashboard } from 'lucide-react';
+import { Plus, LogOut, LayoutDashboard, ChevronsUpDown } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuSkeleton,
+  SidebarRail,
+  SidebarSeparator,
+  useSidebar,
+} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { WorkspaceItem } from './workspace-item';
 import {
   WorkspaceCreateDialog,
@@ -40,8 +60,9 @@ export function WorkspaceSidebar() {
   const router = useRouter();
   const params = useParams();
   const currentId = params.workspaceId as string | undefined;
+  const { state } = useSidebar();
 
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const {
     workspaces,
     loading,
@@ -115,106 +136,145 @@ export function WorkspaceSidebar() {
   };
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <aside className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
-        {/* ヘッダー */}
-        <div className="flex items-center gap-2 px-4 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
-            <LayoutDashboard className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-sm font-semibold text-foreground">
-            Dashboard
-          </span>
-        </div>
+    <>
+      <Sidebar collapsible="icon" variant="sidebar">
+        {/* ── ヘッダー ── */}
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <a href="/dashboard">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                    <LayoutDashboard className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">Dashboard</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      ワークスペース管理
+                    </span>
+                  </div>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
-        <Separator />
+        <SidebarSeparator />
 
-        {/* セクションヘッダー */}
-        <div className="px-4 pt-4 pb-2">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            ワークスペース
-          </span>
-        </div>
+        {/* ── ワークスペースリスト ── */}
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>ワークスペース</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {loading ? (
+                  <>
+                    {[1, 2, 3].map((i) => (
+                      <SidebarMenuItem key={i}>
+                        <SidebarMenuSkeleton showIcon />
+                      </SidebarMenuItem>
+                    ))}
+                  </>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={workspaces.map((w) => w.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {workspaces.map((ws) => (
+                        <SidebarMenuItem key={ws.id}>
+                          <WorkspaceItem
+                            workspace={ws}
+                            isActive={ws.id === currentId}
+                            isLast={workspaces.length === 1}
+                            isCollapsed={state === 'collapsed'}
+                            onClick={() =>
+                              router.push(`/dashboard/workspaces/${ws.id}`)
+                            }
+                            onRename={() => openRenameDialog(ws)}
+                            onDelete={() => openDeleteDialog(ws)}
+                          />
+                        </SidebarMenuItem>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
 
-        {/* ワークスペースリスト */}
-        <div className="flex-1 overflow-y-auto px-2">
-          {loading ? (
-            <div className="space-y-2 px-2">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-8 animate-pulse rounded-lg bg-muted"
-                />
-              ))}
-            </div>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={workspaces.map((w) => w.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {workspaces.map((ws) => (
-                  <WorkspaceItem
-                    key={ws.id}
-                    workspace={ws}
-                    isActive={ws.id === currentId}
-                    isLast={workspaces.length === 1}
-                    onClick={() =>
-                      router.push(`/dashboard/workspaces/${ws.id}`)
-                    }
-                    onRename={() => openRenameDialog(ws)}
-                    onDelete={() => openDeleteDialog(ws)}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-          )}
-        </div>
+                {/* 新規作成ボタン */}
+                <SidebarMenuItem>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <SidebarMenuButton
+                          onClick={() => setCreateOpen(true)}
+                          disabled={workspaces.length >= 10}
+                          tooltip="新規ワークスペース"
+                        >
+                          <Plus className="size-4" />
+                          <span>新規ワークスペース</span>
+                        </SidebarMenuButton>
+                      </div>
+                    </TooltipTrigger>
+                    {workspaces.length >= 10 && (
+                      <TooltipContent>
+                        ワークスペースは最大10件まで作成できます
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-        {/* 新規作成ボタン */}
-        <div className="px-2 py-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Button
-                  id="create-workspace-button"
-                  variant="ghost"
-                  className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-                  disabled={workspaces.length >= 10}
-                  onClick={() => setCreateOpen(true)}
+        <SidebarSeparator />
+
+        {/* ── フッター (サインアウト) ── */}
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground"
+                  >
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-600 to-slate-800 text-white text-xs font-bold uppercase">
+                      {user?.email?.charAt(0) ?? 'U'}
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">
+                        {user?.displayName ?? 'ユーザー'}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {user?.email ?? ''}
+                      </span>
+                    </div>
+                    <ChevronsUpDown className="ml-auto size-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
                 >
-                  <Plus className="h-4 w-4" />
-                  新規ワークスペース
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {workspaces.length >= 10 && (
-              <TooltipContent>
-                ワークスペースは最大10件まで作成できます
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </div>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 size-4" />
+                    サインアウト
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
 
-        <Separator />
-
-        {/* サインアウト */}
-        <div className="px-2 py-2">
-          <Button
-            id="signout-button"
-            variant="ghost"
-            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4" />
-            サインアウト
-          </Button>
-        </div>
-      </aside>
+        <SidebarRail />
+      </Sidebar>
 
       {/* ダイアログ群 */}
       <WorkspaceCreateDialog
@@ -241,6 +301,6 @@ export function WorkspaceSidebar() {
         }}
         onDelete={handleDelete}
       />
-    </TooltipProvider>
+    </>
   );
 }

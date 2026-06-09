@@ -8,8 +8,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { GripVertical, MoreVertical } from 'lucide-react';
+import {
+  SidebarMenuButton,
+  SidebarMenuAction,
+} from '@/components/ui/sidebar';
+import { GripVertical, MoreVertical, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Workspace } from '@/types';
 
@@ -17,6 +20,7 @@ interface WorkspaceItemProps {
   workspace: Workspace;
   isActive: boolean;
   isLast: boolean;
+  isCollapsed: boolean;
   onClick: () => void;
   onRename: () => void;
   onDelete: () => void;
@@ -26,6 +30,7 @@ export function WorkspaceItem({
   workspace,
   isActive,
   isLast,
+  isCollapsed,
   onClick,
   onRename,
   onDelete,
@@ -48,55 +53,55 @@ export function WorkspaceItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        'group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm transition-colors',
-        isActive
-          ? 'bg-accent text-accent-foreground font-medium'
-          : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
-        isDragging && 'opacity-50 shadow-lg'
-      )}
+      className={cn(isDragging && 'opacity-50')}
     >
-      {/* ドラッグハンドル */}
-      <button
-        className="cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-
-      {/* ワークスペース名 */}
-      <button
-        className="flex-1 truncate text-left"
+      <SidebarMenuButton
+        isActive={isActive}
         onClick={onClick}
+        tooltip={workspace.name}
+        className="group/workspace-item"
       >
-        {workspace.name}
-      </button>
+        {/* ドラッグハンドル — collapsed時は非表示 */}
+        {!isCollapsed && (
+          <div
+            className="cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground opacity-0 group-hover/workspace-item:opacity-100 transition-opacity shrink-0"
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="size-3.5" />
+          </div>
+        )}
 
-      {/* コンテキストメニュー */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-          >
-            <MoreVertical className="h-3.5 w-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem onClick={onRename}>
-            名前を変更
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            disabled={isLast}
-            onClick={onDelete}
-          >
-            削除
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        {/* collapsed時のアイコン */}
+        {isCollapsed && <FolderOpen className="size-4" />}
+
+        <span className="truncate">{workspace.name}</span>
+      </SidebarMenuButton>
+
+      {/* コンテキストメニュー — collapsed時は非表示 */}
+      {!isCollapsed && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuAction showOnHover>
+              <MoreVertical className="size-3.5" />
+              <span className="sr-only">メニュー</span>
+            </SidebarMenuAction>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onClick={onRename}>
+              名前を変更
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              disabled={isLast}
+              onClick={onDelete}
+            >
+              削除
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }
