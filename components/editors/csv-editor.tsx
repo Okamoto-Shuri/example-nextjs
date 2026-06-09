@@ -288,7 +288,7 @@ export function CsvEditor({
           columns={columns}
           rows={rows}
           onRowsChange={handleRowsChange}
-          className="h-full border-none"
+          className="h-full"
         />
       </div>
     </div>

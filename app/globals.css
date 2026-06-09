@@ -138,3 +138,15 @@
     display: none;
   }
 }
+
+/* ── CSV Editor: react-data-grid グリッド線を黒色に ── */
+.rdg {
+  --rdg-border-color: #000;
+  --rdg-border-width: 1px;
+  border: 1px solid #000;
+}
+
+.dark .rdg {
+  --rdg-border-color: #888;
+  border-color: #888;
+}
