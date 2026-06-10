@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
@@ -17,7 +19,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { Plus, LogOut, LayoutDashboard, ChevronsUpDown } from 'lucide-react';
+import { Plus, LogOut, ChevronsUpDown } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -144,11 +146,17 @@ export function WorkspaceSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <a href="/dashboard">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                    <LayoutDashboard className="size-4" />
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden bg-white">
+                    <Image
+                      src="/novabase-logo.png"
+                      alt="NovaBase"
+                      width={32}
+                      height={32}
+                      className="size-7 object-contain"
+                    />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Dashboard</span>
+                    <span className="truncate font-bold text-base tracking-tight">NovaBase</span>
                     <span className="truncate text-xs text-muted-foreground">
                       ワークスペース管理
                     </span>

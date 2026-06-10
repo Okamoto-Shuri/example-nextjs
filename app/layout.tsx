@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard — タスク & データ管理",
+  title: "NovaBase — タスク & データ管理",
   description:
-    "パーソナルタスク管理・ドキュメント管理ダッシュボード。ToDo、Markdown、CSV を一元管理。",
+    "NovaBase — パーソナルタスク管理・ドキュメント管理プラットフォーム。ToDo、Markdown、CSV を一元管理。",
 };
 
 export default function RootLayout({
