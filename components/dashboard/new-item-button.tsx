@@ -9,19 +9,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from '@/components/ui/sheet';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +40,7 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
   const params = useParams();
   const workspaceId = params.workspaceId as string;
 
-  const [todoSheetOpen, setTodoSheetOpen] = useState(false);
+  const [todoDialogOpen, setTodoDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [pendingDocType, setPendingDocType] = useState<'md' | 'txt' | 'csv' | null>(null);
 
@@ -59,7 +52,7 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
   // ── 種別選択ハンドラ ──────────────────────────────
   const handleTypeSelect = (type: 'todo' | 'md' | 'txt' | 'csv') => {
     if (type === 'todo') {
-      setTodoSheetOpen(true);
+      setTodoDialogOpen(true);
     } else if (type === 'txt') {
       // テキストはテンプレートなしで直接作成
       handleCreateDoc('txt', '新規テキスト', '');
@@ -87,7 +80,7 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
     if (itemId) {
       setTodoTitle('');
       setTodoContent('');
-      setTodoSheetOpen(false);
+      setTodoDialogOpen(false);
     }
   };
 
@@ -202,16 +195,19 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* ToDo 作成シート（右スライドドロワー） */}
-      <Sheet open={todoSheetOpen} onOpenChange={setTodoSheetOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>新規 ToDo</SheetTitle>
-            <SheetDescription>
+      {/* ToDo 作成モーダル（中央ダイアログ） */}
+      <Dialog open={todoDialogOpen} onOpenChange={setTodoDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-blue-500" />
+              新規 ToDo
+            </DialogTitle>
+            <DialogDescription>
               新しいタスクを作成します。
-            </SheetDescription>
-          </SheetHeader>
-          <form onSubmit={handleCreateTodo} className="mt-6 space-y-4">
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateTodo} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="todo-title">タイトル</Label>
               <Input
@@ -237,14 +233,21 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
                 {todoContent.length}/1000
               </p>
             </div>
-            <SheetFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setTodoDialogOpen(false)}
+              >
+                キャンセル
+              </Button>
               <Button type="submit" disabled={!todoTitle.trim() || todoLoading}>
                 {todoLoading ? '作成中...' : '作成'}
               </Button>
-            </SheetFooter>
+            </DialogFooter>
           </form>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* テンプレート選択ダイアログ */}
       <Dialog
@@ -298,3 +301,4 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
     </>
   );
 }
+

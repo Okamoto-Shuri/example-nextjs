@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,8 @@ import {
   MoreVertical,
   Square,
   CheckCircle2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Item, ItemInput } from '@/types';
@@ -112,20 +114,25 @@ export function ItemList({
   const params = useParams();
   const workspaceId = params.workspaceId as string;
 
-  // ToDo 編集シート state
-  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  // ToDo 編集ダイアログ state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
+  // 削除確認ダイアログ state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetItem, setDeleteTargetItem] = useState<Item | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const handleItemClick = (item: Item) => {
     if (item.type === 'todo') {
-      // ToDo は右スライドドロワーで編集
+      // ToDo は中央モーダルで編集
       setEditItem(item);
       setEditTitle(item.title);
       setEditContent(item.content);
-      setEditSheetOpen(true);
+      setEditDialogOpen(true);
     } else {
       // ドキュメントはエディタページへ遷移
       router.push(
@@ -144,8 +151,28 @@ export function ItemList({
       content: editContent,
     } as Partial<ItemInput>);
     setEditLoading(false);
-    setEditSheetOpen(false);
+    setEditDialogOpen(false);
     setEditItem(null);
+  };
+
+  // ── 削除確認 ──────────────────────────────────────
+  const handleDeleteRequest = (item: Item) => {
+    setDeleteTargetItem(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTargetItem) return;
+    setDeleteLoading(true);
+    await deleteItem(deleteTargetItem.id);
+    setDeleteLoading(false);
+    setDeleteDialogOpen(false);
+    setDeleteTargetItem(null);
+    // 編集ダイアログが開いていたら閉じる
+    if (editDialogOpen) {
+      setEditDialogOpen(false);
+      setEditItem(null);
+    }
   };
 
   // ── ローディング ──────────────────────────────────
@@ -248,7 +275,7 @@ export function ItemList({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => deleteItem(item.id)}
+                  onClick={() => handleDeleteRequest(item)}
                 >
                   削除
                 </DropdownMenuItem>
@@ -258,16 +285,19 @@ export function ItemList({
         ))}
       </div>
 
-      {/* ToDo 編集シート */}
-      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>ToDo を編集</SheetTitle>
-            <SheetDescription>
+      {/* ToDo 編集モーダル */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-blue-500" />
+              ToDo を編集
+            </DialogTitle>
+            <DialogDescription>
               タスクの内容を編集します。
-            </SheetDescription>
-          </SheetHeader>
-          <form onSubmit={handleEditSubmit} className="mt-6 space-y-4">
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="edit-title">タイトル</Label>
               <Input
@@ -291,17 +321,75 @@ export function ItemList({
                 {editContent.length}/1000
               </p>
             </div>
-            <SheetFooter>
+            <DialogFooter className="sm:justify-between">
               <Button
-                type="submit"
-                disabled={!editTitle.trim() || editLoading}
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                onClick={() => {
+                  if (editItem) {
+                    handleDeleteRequest(editItem);
+                  }
+                }}
               >
-                {editLoading ? '保存中...' : '保存'}
+                <Trash2 className="h-4 w-4" />
+                削除
               </Button>
-            </SheetFooter>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(false)}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!editTitle.trim() || editLoading}
+                >
+                  {editLoading ? '保存中...' : '保存'}
+                </Button>
+              </div>
+            </DialogFooter>
           </form>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
+
+      {/* 削除確認ダイアログ */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              削除の確認
+            </DialogTitle>
+            <DialogDescription>
+              「{deleteTargetItem?.title}」を削除しますか？この操作は取り消せません。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDeleteTargetItem(null);
+              }}
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteLoading}
+              onClick={handleDeleteConfirm}
+            >
+              {deleteLoading ? '削除中...' : '削除する'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
