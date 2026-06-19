@@ -197,7 +197,7 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
 
       {/* ToDo 作成モーダル（中央ダイアログ） */}
       <Dialog open={todoDialogOpen} onOpenChange={setTodoDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckSquare className="h-5 w-5 text-blue-500" />
