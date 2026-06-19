@@ -101,6 +101,7 @@ interface ItemListProps {
   toggleStatus: ReturnType<typeof useItems>['toggleStatus'];
   deleteItem: ReturnType<typeof useItems>['deleteItem'];
   updateItem: ReturnType<typeof useItems>['updateItem'];
+  deleteCompletedTodos: ReturnType<typeof useItems>['deleteCompletedTodos'];
 }
 
 export function ItemList({
@@ -109,6 +110,7 @@ export function ItemList({
   toggleStatus,
   deleteItem,
   updateItem,
+  deleteCompletedTodos,
 }: ItemListProps) {
   const router = useRouter();
   const params = useParams();
@@ -125,6 +127,10 @@ export function ItemList({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetItem, setDeleteTargetItem] = useState<Item | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // 一括削除ダイアログ state
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
   const handleItemClick = (item: Item) => {
     if (item.type === 'todo') {
@@ -206,9 +212,38 @@ export function ItemList({
     );
   }
 
+  // ── 完了済みToDo数 ────────────────────────────────
+  const completedTodoCount = items.filter(
+    (item) => item.type === 'todo' && item.status === 'completed'
+  ).length;
+
+  // ── 一括削除ハンドラ ──────────────────────────────
+  const handleBulkDeleteConfirm = async () => {
+    setBulkDeleteLoading(true);
+    await deleteCompletedTodos();
+    setBulkDeleteLoading(false);
+    setBulkDeleteDialogOpen(false);
+  };
+
   // ── アイテム一覧 ──────────────────────────────────
   return (
     <>
+      {/* 完了済みToDo一括削除ボタン */}
+      {completedTodoCount > 0 && (
+        <div className="flex items-center justify-end mb-3">
+          <Button
+            id="bulk-delete-completed"
+            variant="outline"
+            size="sm"
+            className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive transition-colors text-[10px] h-6 px-1"
+            onClick={() => setBulkDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            完了済みを一括削除（{completedTodoCount}件）
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-1">
         {items.map((item) => (
           <div
@@ -385,6 +420,41 @@ export function ItemList({
               onClick={handleDeleteConfirm}
             >
               {deleteLoading ? '削除中...' : '削除する'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 完了済みToDo 一括削除確認ダイアログ */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              完了済みToDoの一括削除
+            </DialogTitle>
+            <DialogDescription>
+              完了済みのToDo {completedTodoCount}件をすべて削除しますか？この操作は取り消せません。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setBulkDeleteDialogOpen(false);
+              }}
+            >
+              キャンセル
+            </Button>
+            <Button
+              id="bulk-delete-confirm"
+              type="button"
+              variant="destructive"
+              disabled={bulkDeleteLoading}
+              onClick={handleBulkDeleteConfirm}
+            >
+              {bulkDeleteLoading ? '削除中...' : `${completedTodoCount}件を削除する`}
             </Button>
           </DialogFooter>
         </DialogContent>

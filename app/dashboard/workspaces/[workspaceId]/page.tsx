@@ -23,6 +23,7 @@ export default function WorkspacePage() {
     toggleStatus,
     deleteItem,
     updateItem,
+    deleteCompletedTodos,
   } = useItems(workspaceId);
 
   return (
@@ -51,6 +52,7 @@ export default function WorkspacePage() {
           toggleStatus={toggleStatus}
           deleteItem={deleteItem}
           updateItem={updateItem}
+          deleteCompletedTodos={deleteCompletedTodos}
         />
       </div>
     </div>

@@ -212,6 +212,39 @@ export function useItems(workspaceId: string | null) {
     [itemsPath, items, workspaceId, uid, fetchItems]
   );
 
+  // ── 完了済み ToDo 一括削除 ─────────────────────────
+  const deleteCompletedTodos = useCallback(
+    async () => {
+      if (!itemsPath) return;
+
+      const completedTodos = items.filter(
+        (item) => item.type === 'todo' && item.status === 'completed'
+      );
+      if (completedTodos.length === 0) return;
+
+      // 楽観的に削除
+      const completedIds = new Set(completedTodos.map((i) => i.id));
+      setItems((prev) => prev.filter((i) => !completedIds.has(i.id)));
+
+      const count = completedTodos.length;
+      toast.success(`${count}件の完了済みToDoを削除しました`);
+
+      // 実際の削除（並列実行）
+      const results = await Promise.allSettled(
+        completedTodos.map((item) =>
+          deleteDoc(doc(db, itemsPath, item.id))
+        )
+      );
+
+      const failures = results.filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        toast.error(`${failures.length}件の削除に失敗しました`);
+        await fetchItems(); // ロールバック
+      }
+    },
+    [itemsPath, items, fetchItems]
+  );
+
   return {
     items: filteredItems,
     allItems: items,
@@ -223,5 +256,6 @@ export function useItems(workspaceId: string | null) {
     updateItem,
     toggleStatus,
     deleteItem,
+    deleteCompletedTodos,
   };
 }
