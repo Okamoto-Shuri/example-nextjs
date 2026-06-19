@@ -168,7 +168,8 @@ export function CsvEditor({
   // ── エクスポート ──────────────────────────────────
   const handleDownload = () => {
     const csvStr = toCsvString(headers, rows);
-    const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8' });
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvStr], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement('a'), {
       href: url,
