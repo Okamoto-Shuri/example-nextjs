@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
       path:     '/',
     });
     return res;
-  } catch {
+  } catch (err) {
+    console.error('Session cookie creation failed:', err);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }
+
