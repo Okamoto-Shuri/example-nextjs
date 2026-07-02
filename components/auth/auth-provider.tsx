@@ -85,15 +85,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser(firebaseUser);
         try {
           await initializeUserIfNeeded(
             firebaseUser.uid,
             firebaseUser.email ?? ''
           );
           await createSessionCookie(firebaseUser);
+          setUser(firebaseUser);
         } catch (err) {
           console.error('Auth initialization error:', err);
+          setUser(null);
         }
       } else {
         setUser(null);
