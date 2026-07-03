@@ -33,8 +33,14 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      // initializeUserIfNeeded は AuthProvider の onAuthStateChanged で自動実行される
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // セッションCookieを発行してからリダイレクト（proxy.ts がCookieを検証するため）
+      const idToken = await userCredential.user.getIdToken();
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
       router.push('/dashboard');
     } catch (err: unknown) {
       const firebaseError = err as { code?: string };

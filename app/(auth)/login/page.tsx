@@ -44,7 +44,14 @@ function LoginForm() {
     setError('');
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // セッションCookieを発行してからリダイレクト（proxy.ts がCookieを検証するため）
+      const idToken = await userCredential.user.getIdToken();
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
       router.push(callbackUrl);
     } catch {
       setError('メールアドレスまたはパスワードが正しくありません。');
