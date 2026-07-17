@@ -30,9 +30,11 @@ import {
   CheckCircle2,
   Trash2,
   AlertTriangle,
+  FolderInput,
+  FolderMinus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Item, ItemInput } from '@/types';
+import type { Item, ItemInput, Folder } from '@/types';
 import type { useItems } from '@/hooks/use-items';
 
 // ================================================================
@@ -102,6 +104,9 @@ interface ItemListProps {
   deleteItem: ReturnType<typeof useItems>['deleteItem'];
   updateItem: ReturnType<typeof useItems>['updateItem'];
   deleteCompletedTodos: ReturnType<typeof useItems>['deleteCompletedTodos'];
+  moveItemToFolder?: ReturnType<typeof useItems>['moveItemToFolder'];
+  allFolders?: Folder[];
+  currentFolderId?: string | null;
 }
 
 export function ItemList({
@@ -111,6 +116,9 @@ export function ItemList({
   deleteItem,
   updateItem,
   deleteCompletedTodos,
+  moveItemToFolder,
+  allFolders = [],
+  currentFolderId = null,
 }: ItemListProps) {
   const router = useRouter();
   const params = useParams();
@@ -304,10 +312,36 @@ export function ItemList({
                   <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-32">
+              <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem onClick={() => handleItemClick(item)}>
                   編集
                 </DropdownMenuItem>
+                {/* フォルダー移動メニュー */}
+                {moveItemToFolder && (
+                  <>
+                    {currentFolderId && (
+                      <DropdownMenuItem
+                        onClick={() => moveItemToFolder(item.id, null)}
+                        className="gap-2"
+                      >
+                        <FolderMinus className="h-3.5 w-3.5 text-muted-foreground" />
+                        ルートに戻す
+                      </DropdownMenuItem>
+                    )}
+                    {allFolders
+                      .filter((f) => f.id !== currentFolderId)
+                      .map((folder) => (
+                        <DropdownMenuItem
+                          key={folder.id}
+                          onClick={() => moveItemToFolder(item.id, folder.id)}
+                          className="gap-2"
+                        >
+                          <FolderInput className="h-3.5 w-3.5 text-amber-500" />
+                          <span className="truncate max-w-[120px]">{folder.name}へ移動</span>
+                        </DropdownMenuItem>
+                      ))}
+                  </>
+                )}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => handleDeleteRequest(item)}

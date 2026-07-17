@@ -21,6 +21,26 @@ const docContentCheck = z.string().superRefine((val, ctx) => {
 });
 
 // ================================================================
+// フォルダー
+// ================================================================
+
+export const FolderSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'フォルダー名は必須です')
+    .max(30, 'フォルダー名は30文字以内で入力してください'),
+});
+
+export type FolderInput = z.infer<typeof FolderSchema>;
+
+export type Folder = FolderInput & {
+  id: string;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+// ================================================================
 // ワークスペース
 // ================================================================
 
@@ -91,12 +111,14 @@ export type Workspace = WorkspaceInput & {
 
 export type TodoItem = TodoItemInput & {
   id: string;
+  folderId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
 export type DocItem = DocItemInput & {
   id: string;
+  folderId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

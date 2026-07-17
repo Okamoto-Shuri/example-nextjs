@@ -36,6 +36,7 @@ function toItem(id: string, data: Record<string, unknown>): Item {
     title: data.title as string,
     content: (data.content as string) ?? '',
     status: data.status as string,
+    folderId: (data.folderId as string | null) ?? null,
     createdAt: (data.createdAt as Timestamp)?.toDate?.() ?? new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate?.() ?? new Date(),
   };
@@ -99,11 +100,12 @@ export function useItems(workspaceId: string | null) {
 
   // ── 作成 ─────────────────────────────────────────
   const createItem = useCallback(
-    async (input: ItemInput): Promise<string | null> => {
+    async (input: ItemInput, folderId?: string | null): Promise<string | null> => {
       if (!itemsPath) return null;
       try {
         const docRef = await addDoc(collection(db, itemsPath), {
           ...input,
+          folderId: folderId ?? null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -245,6 +247,30 @@ export function useItems(workspaceId: string | null) {
     [itemsPath, items, fetchItems]
   );
 
+  // ── フォルダー移動 ────────────────────────────────
+  const moveItemToFolder = useCallback(
+    async (itemId: string, folderId: string | null) => {
+      if (!itemsPath) return;
+      try {
+        await updateDoc(doc(db, itemsPath, itemId), {
+          folderId: folderId ?? null,
+          updatedAt: serverTimestamp(),
+        });
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId
+              ? { ...item, folderId: folderId ?? null, updatedAt: new Date() }
+              : item
+          ) as Item[]
+        );
+      } catch {
+        toast.error('移動に失敗しました。再度お試しください。');
+        await fetchItems();
+      }
+    },
+    [itemsPath, fetchItems]
+  );
+
   return {
     items: filteredItems,
     allItems: items,
@@ -257,5 +283,6 @@ export function useItems(workspaceId: string | null) {
     toggleStatus,
     deleteItem,
     deleteCompletedTodos,
+    moveItemToFolder,
   };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
   DropdownMenu,
@@ -33,9 +33,19 @@ import type { ItemInput } from '@/types';
 
 interface NewItemButtonProps {
   createItem: ReturnType<typeof useItems>['createItem'];
+  folderId?: string | null;
+  variant?: 'default' | 'outline' | 'ghost';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+  label?: React.ReactNode;
 }
 
-export function NewItemButton({ createItem }: NewItemButtonProps) {
+export function NewItemButton({
+  createItem,
+  folderId,
+  variant = 'default',
+  size = 'default',
+  label,
+}: NewItemButtonProps) {
   const router = useRouter();
   const params = useParams();
   const workspaceId = params.workspaceId as string;
@@ -74,7 +84,7 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
       content: todoContent,
       status: 'pending',
     };
-    const itemId = await createItem(input);
+    const itemId = await createItem(input, folderId);
     setTodoLoading(false);
 
     if (itemId) {
@@ -96,7 +106,7 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
       content,
       status: 'in_progress',
     };
-    const itemId = await createItem(input);
+    const itemId = await createItem(input, folderId);
     if (itemId) {
       setTemplateDialogOpen(false);
       setPendingDocType(null);
@@ -151,9 +161,18 @@ export function NewItemButton({ createItem }: NewItemButtonProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button id="new-item-button" className="gap-2">
-            <Plus className="h-4 w-4" />
-            新規作成
+          <Button
+            id={folderId ? `new-item-button-folder-${folderId}` : 'new-item-button'}
+            variant={variant}
+            size={size}
+            className="gap-2"
+          >
+            {label ?? (
+              <>
+                <Plus className="h-4 w-4" />
+                新規作成
+              </>
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
