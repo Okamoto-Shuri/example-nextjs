@@ -65,7 +65,9 @@ export function useItems(workspaceId: string | null) {
     ? `users/${uid}/workspaces/${workspaceId}/items`
     : null;
 
-  // ── 取得（order 昇順、次に updatedAt 降順） ────────
+  // ── 取得（updatedAt で全件取得 → クライアント側で order ソート） ───
+  // ※ orderBy('order') はフィールド未存在のドキュメントを除外してしまうため、
+  //    updatedAt で取得してクライアント側でソートする
   const fetchItems = useCallback(async () => {
     if (!itemsPath) {
       setItems([]);
@@ -76,11 +78,17 @@ export function useItems(workspaceId: string | null) {
     try {
       const q = query(
         collection(db, itemsPath),
-        orderBy('order', 'asc'),
+        orderBy('updatedAt', 'desc'),
         limit(100)
       );
       const snap = await getDocs(q);
-      setItems(snap.docs.map((d) => toItem(d.id, d.data())));
+      const fetched = snap.docs.map((d) => toItem(d.id, d.data()));
+      // クライアント側ソート：order 昇順、同値なら updatedAt 降順
+      fetched.sort((a, b) => {
+        if (a.order !== b.order) return a.order - b.order;
+        return b.updatedAt.getTime() - a.updatedAt.getTime();
+      });
+      setItems(fetched);
     } catch (err) {
       console.error('Failed to fetch items:', err);
       toast.error('アイテムの取得に失敗しました');
