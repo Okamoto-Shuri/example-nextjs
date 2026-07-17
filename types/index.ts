@@ -112,6 +112,7 @@ export type Workspace = WorkspaceInput & {
 export type TodoItem = TodoItemInput & {
   id: string;
   folderId?: string | null;
+  order: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -119,6 +120,7 @@ export type TodoItem = TodoItemInput & {
 export type DocItem = DocItemInput & {
   id: string;
   folderId?: string | null;
+  order: number;
   createdAt: Date;
   updatedAt: Date;
 };

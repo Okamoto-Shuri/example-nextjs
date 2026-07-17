@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -34,6 +38,7 @@ import {
   FolderMinus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SortableItemRow } from '@/components/dashboard/sortable-item-row';
 import type { Item, ItemInput, Folder } from '@/types';
 import type { useItems } from '@/hooks/use-items';
 
@@ -107,6 +112,8 @@ interface ItemListProps {
   moveItemToFolder?: ReturnType<typeof useItems>['moveItemToFolder'];
   allFolders?: Folder[];
   currentFolderId?: string | null;
+  // DnD 用 container ID（どのコンテナに属するか）
+  containerId: string;
 }
 
 export function ItemList({
@@ -119,6 +126,7 @@ export function ItemList({
   moveItemToFolder,
   allFolders = [],
   currentFolderId = null,
+  containerId,
 }: ItemListProps) {
   const router = useRouter();
   const params = useParams();
@@ -205,19 +213,23 @@ export function ItemList({
 
   // ── 空状態 ────────────────────────────────────────
   if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="rounded-full bg-muted p-4 mb-4">
-          <FileText className="h-8 w-8 text-muted-foreground" />
+    // フォルダー内は folder-section.tsx でハンドル済みなので、ここではルートの空状態のみ
+    if (!currentFolderId) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="rounded-full bg-muted p-4 mb-4">
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground mb-1">
+            アイテムがありません
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            右上の「新規作成」ボタンから、ToDoやドキュメントを追加しましょう。
+          </p>
         </div>
-        <h3 className="text-lg font-medium text-foreground mb-1">
-          アイテムがありません
-        </h3>
-        <p className="text-sm text-muted-foreground max-w-sm">
-          右上の「新規作成」ボタンから、ToDoやドキュメントを追加しましょう。
-        </p>
-      </div>
-    );
+      );
+    }
+    return null;
   }
 
   // ── 完了済みToDo数 ────────────────────────────────
@@ -252,107 +264,115 @@ export function ItemList({
         </div>
       )}
 
-      <div className="space-y-1">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50 cursor-pointer"
-          >
-            {/* チェックボックス（ToDoのみ） */}
-            {item.type === 'todo' ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleStatus(item);
-                }}
-                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+      {/* SortableContext でアイテム一覧を DnD 対応 */}
+      <SortableContext
+        id={containerId}
+        items={items.map((i) => i.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-0.5">
+          {items.map((item) => (
+            <SortableItemRow key={item.id} id={item.id} item={item}>
+              <div
+                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50 cursor-pointer"
               >
-                {item.status === 'completed' ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                ) : (
-                  <Square className="h-5 w-5" />
-                )}
-              </button>
-            ) : (
-              <div className="shrink-0">
-                <TypeIcon type={item.type} />
-              </div>
-            )}
-
-            {/* タイトル + クリックエリア */}
-            <button
-              className={cn(
-                'flex-1 truncate text-left text-sm',
-                item.status === 'completed' && item.type === 'todo'
-                  ? 'line-through text-muted-foreground'
-                  : 'text-foreground'
-              )}
-              onClick={() => handleItemClick(item)}
-            >
-              {item.title}
-            </button>
-
-            {/* ステータスバッジ */}
-            <StatusBadge status={item.status} />
-
-            {/* 最終更新日時 */}
-            <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap">
-              {relativeTime(item.updatedAt)}
-            </span>
-
-            {/* アクションメニュー */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={() => handleItemClick(item)}>
-                  編集
-                </DropdownMenuItem>
-                {/* フォルダー移動メニュー */}
-                {moveItemToFolder && (
-                  <>
-                    {currentFolderId && (
-                      <DropdownMenuItem
-                        onClick={() => moveItemToFolder(item.id, null)}
-                        className="gap-2"
-                      >
-                        <FolderMinus className="h-3.5 w-3.5 text-muted-foreground" />
-                        ルートに戻す
-                      </DropdownMenuItem>
+                {/* チェックボックス（ToDoのみ） */}
+                {item.type === 'todo' ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatus(item);
+                    }}
+                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {item.status === 'completed' ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    ) : (
+                      <Square className="h-5 w-5" />
                     )}
-                    {allFolders
-                      .filter((f) => f.id !== currentFolderId)
-                      .map((folder) => (
-                        <DropdownMenuItem
-                          key={folder.id}
-                          onClick={() => moveItemToFolder(item.id, folder.id)}
-                          className="gap-2"
-                        >
-                          <FolderInput className="h-3.5 w-3.5 text-amber-500" />
-                          <span className="truncate max-w-[120px]">{folder.name}へ移動</span>
-                        </DropdownMenuItem>
-                      ))}
-                  </>
+                  </button>
+                ) : (
+                  <div className="shrink-0">
+                    <TypeIcon type={item.type} />
+                  </div>
                 )}
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => handleDeleteRequest(item)}
+
+                {/* タイトル + クリックエリア */}
+                <button
+                  className={cn(
+                    'flex-1 truncate text-left text-sm',
+                    item.status === 'completed' && item.type === 'todo'
+                      ? 'line-through text-muted-foreground'
+                      : 'text-foreground'
+                  )}
+                  onClick={() => handleItemClick(item)}
                 >
-                  削除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
-      </div>
+                  {item.title}
+                </button>
+
+                {/* ステータスバッジ */}
+                <StatusBadge status={item.status} />
+
+                {/* 最終更新日時 */}
+                <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap">
+                  {relativeTime(item.updatedAt)}
+                </span>
+
+                {/* アクションメニュー */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => handleItemClick(item)}>
+                      編集
+                    </DropdownMenuItem>
+                    {/* フォルダー移動メニュー */}
+                    {moveItemToFolder && (
+                      <>
+                        {currentFolderId && (
+                          <DropdownMenuItem
+                            onClick={() => moveItemToFolder(item.id, null)}
+                            className="gap-2"
+                          >
+                            <FolderMinus className="h-3.5 w-3.5 text-muted-foreground" />
+                            ルートに戻す
+                          </DropdownMenuItem>
+                        )}
+                        {allFolders
+                          .filter((f) => f.id !== currentFolderId)
+                          .map((folder) => (
+                            <DropdownMenuItem
+                              key={folder.id}
+                              onClick={() => moveItemToFolder(item.id, folder.id)}
+                              className="gap-2"
+                            >
+                              <FolderInput className="h-3.5 w-3.5 text-amber-500" />
+                              <span className="truncate max-w-[120px]">{folder.name}へ移動</span>
+                            </DropdownMenuItem>
+                          ))}
+                      </>
+                    )}
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => handleDeleteRequest(item)}
+                    >
+                      削除
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </SortableItemRow>
+          ))}
+        </div>
+      </SortableContext>
 
       {/* ToDo 編集モーダル */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -496,4 +516,3 @@ export function ItemList({
     </>
   );
 }
-

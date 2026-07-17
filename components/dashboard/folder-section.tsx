@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useDroppable } from '@dnd-kit/core';
 import {
   ChevronRight,
   FolderOpen,
@@ -60,34 +61,56 @@ export function FolderSection({
 
   const folderItems = items.filter((item) => item.folderId === folder.id);
 
+  // ── フォルダーヘッダーをドロップターゲットにする ─
+  // id: `folder-header-{folderId}` として workspace page の onDragEnd で識別
+  const { setNodeRef: setHeaderDropRef, isOver: isHeaderOver } = useDroppable({
+    id: `folder-header-${folder.id}`,
+    data: { type: 'folder-header', folderId: folder.id },
+  });
+
   return (
     <div className="rounded-lg border border-border/60 overflow-hidden">
-      {/* フォルダーヘッダー */}
+      {/* フォルダーヘッダー（ドロップ可能） */}
       <div
+        ref={setHeaderDropRef}
         className={cn(
           'flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none',
-          'bg-muted/40 hover:bg-muted/70 transition-colors',
-          'group'
+          'transition-colors group',
+          isHeaderOver
+            ? 'bg-primary/10 border-primary/30 ring-1 ring-primary/30'
+            : 'bg-muted/40 hover:bg-muted/70'
         )}
         onClick={() => setIsOpen((prev) => !prev)}
       >
+        {/* ドロップ中のビジュアルヒント */}
+        {isHeaderOver && (
+          <span className="text-xs text-primary font-medium shrink-0">
+            ここに移動
+          </span>
+        )}
+
         {/* 展開/折りたたみアイコン */}
-        <ChevronRight
-          className={cn(
-            'h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200',
-            isOpen && 'rotate-90'
-          )}
-        />
+        {!isHeaderOver && (
+          <ChevronRight
+            className={cn(
+              'h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200',
+              isOpen && 'rotate-90'
+            )}
+          />
+        )}
 
         {/* フォルダーアイコン */}
-        {isOpen ? (
-          <FolderOpen className="h-4 w-4 text-amber-500 shrink-0" />
+        {isOpen || isHeaderOver ? (
+          <FolderOpen className={cn('h-4 w-4 shrink-0', isHeaderOver ? 'text-primary' : 'text-amber-500')} />
         ) : (
           <FolderIcon className="h-4 w-4 text-amber-500 shrink-0" />
         )}
 
         {/* フォルダー名 */}
-        <span className="flex-1 text-sm font-medium text-foreground truncate">
+        <span className={cn(
+          'flex-1 text-sm font-medium truncate',
+          isHeaderOver ? 'text-primary' : 'text-foreground'
+        )}>
           {folder.name}
         </span>
 
@@ -134,7 +157,10 @@ export function FolderSection({
       {isOpen && (
         <div className="px-3 py-2 bg-background">
           {folderItems.length === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+            <div className={cn(
+              'flex flex-col items-center justify-center py-6 text-center gap-2 rounded-lg transition-colors',
+              isHeaderOver && 'bg-primary/5'
+            )}>
               <FolderOpen className="h-6 w-6 text-muted-foreground/40" />
               <p className="text-xs text-muted-foreground">
                 このフォルダーは空です
@@ -165,6 +191,7 @@ export function FolderSection({
               moveItemToFolder={moveItemToFolder}
               allFolders={allFolders}
               currentFolderId={folder.id}
+              containerId={`folder-${folder.id}`}
             />
           )}
         </div>

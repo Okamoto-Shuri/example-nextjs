@@ -12,6 +12,7 @@ import {
   limit,
   query,
   serverTimestamp,
+  writeBatch,
   type Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -37,6 +38,7 @@ function toItem(id: string, data: Record<string, unknown>): Item {
     content: (data.content as string) ?? '',
     status: data.status as string,
     folderId: (data.folderId as string | null) ?? null,
+    order: (data.order as number) ?? 0,
     createdAt: (data.createdAt as Timestamp)?.toDate?.() ?? new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate?.() ?? new Date(),
   };
@@ -63,7 +65,7 @@ export function useItems(workspaceId: string | null) {
     ? `users/${uid}/workspaces/${workspaceId}/items`
     : null;
 
-  // ── 取得 ─────────────────────────────────────────
+  // ── 取得（order 昇順、次に updatedAt 降順） ────────
   const fetchItems = useCallback(async () => {
     if (!itemsPath) {
       setItems([]);
@@ -74,7 +76,7 @@ export function useItems(workspaceId: string | null) {
     try {
       const q = query(
         collection(db, itemsPath),
-        orderBy('updatedAt', 'desc'),
+        orderBy('order', 'asc'),
         limit(100)
       );
       const snap = await getDocs(q);
@@ -102,10 +104,13 @@ export function useItems(workspaceId: string | null) {
   const createItem = useCallback(
     async (input: ItemInput, folderId?: string | null): Promise<string | null> => {
       if (!itemsPath) return null;
+      // 現在の最大 order の次の値を割り当てる
+      const maxOrder = items.reduce((m, i) => Math.max(m, i.order), -1);
       try {
         const docRef = await addDoc(collection(db, itemsPath), {
           ...input,
           folderId: folderId ?? null,
+          order: maxOrder + 1,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -116,7 +121,7 @@ export function useItems(workspaceId: string | null) {
         return null;
       }
     },
-    [itemsPath, fetchItems]
+    [itemsPath, items, fetchItems]
   );
 
   // ── 更新 ─────────────────────────────────────────
@@ -186,6 +191,8 @@ export function useItems(workspaceId: string | null) {
                 title: saved.item.title,
                 content: saved.item.content,
                 status: saved.item.status,
+                folderId: saved.item.folderId ?? null,
+                order: saved.item.order,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
               });
@@ -271,6 +278,41 @@ export function useItems(workspaceId: string | null) {
     [itemsPath, fetchItems]
   );
 
+  // ── 並び替え（DnD 後に呼ぶ） ─────────────────────
+  // newItems: 新しい並び順のアイテム配列（ローカル state 更新済み前提）
+  // この関数は楽観的更新後の Firestore 書き込み専用
+  const reorderItems = useCallback(
+    async (newItems: Item[]) => {
+      if (!itemsPath) return;
+      const prev = [...items];
+      // ローカル state を即時更新
+      setItems(newItems);
+
+      // 変更があった order のみ batch 更新
+      const batch = writeBatch(db);
+      let changed = false;
+      newItems.forEach((item, index) => {
+        if (item.order !== index) {
+          batch.update(doc(db, itemsPath, item.id), {
+            order: index,
+            updatedAt: serverTimestamp(),
+          });
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        try {
+          await batch.commit();
+        } catch {
+          setItems(prev); // ロールバック
+          toast.error('並び替えの保存に失敗しました');
+        }
+      }
+    },
+    [itemsPath, items]
+  );
+
   return {
     items: filteredItems,
     allItems: items,
@@ -284,5 +326,7 @@ export function useItems(workspaceId: string | null) {
     deleteItem,
     deleteCompletedTodos,
     moveItemToFolder,
+    reorderItems,
+    setItems,
   };
 }
