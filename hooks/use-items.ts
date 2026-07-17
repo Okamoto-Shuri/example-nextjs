@@ -8,7 +8,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  orderBy,
   limit,
   query,
   serverTimestamp,
@@ -65,9 +64,11 @@ export function useItems(workspaceId: string | null) {
     ? `users/${uid}/workspaces/${workspaceId}/items`
     : null;
 
-  // ── 取得（updatedAt で全件取得 → クライアント側で order ソート） ───
-  // ※ orderBy('order') はフィールド未存在のドキュメントを除外してしまうため、
-  //    updatedAt で取得してクライアント側でソートする
+  // ── 取得（orderBy を使わず全件取得→クライアントソート） ───
+  //
+  // ※ Firestore の orderBy() は指定フィールドが存在しないドキュメントを
+  //    結果から除外する。旧データに order / updatedAt がない場合も
+  //    正しく取得できるよう、orderBy なしで全件取得しクライアントでソートする。
   const fetchItems = useCallback(async () => {
     if (!itemsPath) {
       setItems([]);
@@ -76,17 +77,17 @@ export function useItems(workspaceId: string | null) {
     }
     setLoading(true);
     try {
-      const q = query(
-        collection(db, itemsPath),
-        orderBy('updatedAt', 'desc'),
-        limit(100)
+      // orderBy なしで limit のみ→全フィールドのドキュメントが返ってくる
+      const snap = await getDocs(
+        query(collection(db, itemsPath), limit(200))
       );
-      const snap = await getDocs(q);
       const fetched = snap.docs.map((d) => toItem(d.id, d.data()));
-      // クライアント側ソート：order 昇順、同値なら updatedAt 降順
+      // クライアント側ソート：
+      //   1) order 昇順（DnDで設定された値）
+      //   2) order が同値なら createdAt 降順（新しいアイテムが上）
       fetched.sort((a, b) => {
         if (a.order !== b.order) return a.order - b.order;
-        return b.updatedAt.getTime() - a.updatedAt.getTime();
+        return b.createdAt.getTime() - a.createdAt.getTime();
       });
       setItems(fetched);
     } catch (err) {
