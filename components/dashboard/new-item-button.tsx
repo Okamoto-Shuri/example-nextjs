@@ -25,7 +25,9 @@ import {
   FileText,
   FileType,
   FileSpreadsheet,
+  FolderPlus,
 } from 'lucide-react';
+import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useItems } from '@/hooks/use-items';
 import { templates, applyDatePlaceholder } from '@/constants/templates';
 import { ImportFileSchema } from '@/types';
@@ -37,6 +39,9 @@ interface NewItemButtonProps {
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   label?: React.ReactNode;
+  // フォルダー作成コールバック（渡されると最下部にフォルダー欄を表示）
+  onCreateFolder?: () => void;
+  folderDisabled?: boolean;
 }
 
 export function NewItemButton({
@@ -45,6 +50,8 @@ export function NewItemButton({
   variant = 'default',
   size = 'default',
   label,
+  onCreateFolder,
+  folderDisabled = false,
 }: NewItemButtonProps) {
   const router = useRouter();
   const params = useParams();
@@ -211,6 +218,25 @@ export function NewItemButton({
             <Plus className="h-4 w-4" />
             ファイルをインポート
           </DropdownMenuItem>
+          {/* フォルダー作成（onCreateFolder が渡された場合のみ表示） */}
+          {onCreateFolder && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="gap-2"
+                onClick={onCreateFolder}
+                disabled={folderDisabled}
+              >
+                <FolderPlus className="h-4 w-4 text-amber-500" />
+                フォルダーを作成
+                {folderDisabled && (
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    上限20件
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
